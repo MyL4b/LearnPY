@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Sets character encoding to UTF-8 (supports most characters) -->
+  <meta charset="UTF-8" />
+
+  <!-- Ensures proper scaling and responsiveness on mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Page title shown in the browser tab -->
+  <title>Learning Python</title>
+
+  <style>
+    /* Reset: makes padding & border included in element width/height */
+    * { box-sizing: border-box; }
+
+    /* Page background and centering */
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #d3d3d3;
+      font-family: "Times New Roman", serif;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Main content container */
+    .page {
+      background: white;
+      width: 100%;
+      max-width: 900px;
+      padding: clamp(12px, 3vw, 24px);
+      border-radius: 18px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Page title styling */
+    .title {
+      color: #003366;
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 700;
+      margin: 0;
+    }
+
+    /* Decorative horizontal divider */
+    .divider {
+      height: 4px;
+      border: none;
+      background: linear-gradient(to right, #555 0%, #999 30%, transparent 100%);
+      margin: 6px 0 0 0;
+    }
+
+    /* Slideshow wrapper */
+    .slideshow-container {
+      position: relative;
+      width: 100%;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* Image scales to fit container without cropping */
+    .slideshow-container img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    /* Navigation arrows (previous / next) */
+    .nav-btn {
+      all: unset;                     /* Removes default button styles */
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+
+      width: 28px;
+      height: 28px;
+      font-size: 18px;
+
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      cursor: pointer;
+      background: rgba(0,0,0,0.25);
+      color: white;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Darker background on hover */
+    .nav-btn:hover {
+      background: rgba(0,0,0,0.4);
+    }
+
+    /* Positioning for left and right buttons */
+    .left { left: 8px; }
+    .right { right: 8px; }
+
+    /* Button that opens the editor */
+    .open-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+
+    /* Hover effect for editor button */
+    .open-btn:hover {
+      background: linear-gradient(135deg, #0056b3, #1f75cc);
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 480px) {
+      body { padding: 10px; }
+      .page { border-radius: 14px; }
+
+      .nav-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 16px;
+      }
+
+      .left { left: 6px; }
+      .right { right: 6px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Main page container -->
+  <div class="page">
+    <h1 class="title">An introduction to Python</h1>
+    <hr class="divider">
+
+    <!-- Slideshow -->
+    <div class="slideshow-container">
+      <!-- Image element where slides are displayed -->
+      <img id="slide" alt="Slide">
+
+      <!-- Previous slide button -->
+      <button class="nav-btn left" aria-label="Previous" type="button" onclick="prevSlide()">
+        &#10094;
+      </button>
+
+      <!-- Next slide button -->
+      <button class="nav-btn right" aria-label="Next" type="button" onclick="nextSlide()">
+        &#10095;
+      </button>
+    </div>
+
+    <!-- Opens IDE.htm in a new browser tab -->
+    <button class="open-btn" type="button" onclick="window.open('IDE.htm', '_blank')">
+      Open Editor
+    </button>
+  </div>
+
+  <script>
+    /* Total number of slide images */
+    const totalImages = 35;
+
+    /* Create an array: ["1.jpg", "2.jpg", ..., "35.jpg"] */
+    const images = Array.from({ length: totalImages }, (_, i) => `${i + 1}.jpg`);
+
+    /* Index of the currently displayed slide */
+    let currentSlide = 0;
+
+    /* Reference to the image element */
+    const slide = document.getElementById('slide');
+
+    /* Displays the image at the given index */
+    function showSlide(index) {
+      const img = new Image(); // Preload image
+
+      /* If image loads successfully */
+      img.onload = () => {
+        slide.src = images[index];
+        slide.alt = `Slide ${index + 1}`;
+      };
+
+      /* If image fails to load, skip to next image */
+      img.onerror = () => {
+        console.warn(`Missing image: ${images[index]}`);
+        currentSlide = (currentSlide + 1) % images.length;
+        showSlide(currentSlide);
+      };
+
+      /* Start loading the image */
+      img.src = images[index];
+    }
+
+    /* Go to next slide (wraps around at the end) */
+    function nextSlide() {
+      currentSlide = (currentSlide + 1) % images.length;
+      showSlide(currentSlide);
+    }
+
+    /* Go to previous slide (wraps around at the beginning) */
+    function prevSlide() {
+      currentSlide = (currentSlide - 1 + images.length) % images.length;
+      showSlide(currentSlide);
+    }
+
+    /* Touch swipe support for mobile devices */
+    let startX = null;
+    const container = document.querySelector('.slideshow-container');
+
+    /* Records starting touch position */
+    container.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    /* Determines swipe direction on touch release */
+    container.addEventListener('touchend', (e) => {
+      if (startX === null) return;
+
+      const dx = e.changedTouches[0].clientX - startX;
+
+      /* Swipe threshold of 40px */
+      if (Math.abs(dx) > 40) {
+        dx < 0 ? nextSlide() : prevSlide();
+      }
+
+      startX = null;
+    });
+
+    /* Display the first slide on page load */
+    showSlide(currentSlide);
+  </script>
+
+</body>
+</html>

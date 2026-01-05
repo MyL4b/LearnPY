@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Character encoding -->
+  <meta charset="UTF-8">
+
+  <!-- Browser tab title -->
+  <title>Python IDE</title>
+
+  <!-- Mobile viewport: ensures proper scaling and safe-area handling -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- Pyodide: runs Python directly in the browser using WebAssembly -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+  <!-- Monaco Editor loader (the editor used in VS Code) -->
+  <script src="https://unpkg.com/monaco-editor@0.43.0/min/vs/loader.js"></script>
+
+  <style>
+    /* Include padding & border in width/height calculations */
+    * { box-sizing: border-box; }
+
+    /* Page background and centering */
+    body {
+      background: #d3d3d3;
+      font-family: "Times New Roman", serif;
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* Main page container */
+    .page {
+      background: white;
+      width: min(980px, 100%);
+      padding: clamp(12px, 3vw, 24px);
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      color: #111;
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Page title */
+    .title {
+      color: #003366;
+      font-size: clamp(20px, 5vw, 32px);
+      font-weight: 700;
+      margin: 0;
+    }
+
+    /* Decorative divider under title */
+    .divider {
+      width: 100%;
+      height: 4px;
+      border: none;
+      background: linear-gradient(to right, #555 0%, #999 30%, transparent 100%);
+      margin: 0 0 6px 0;
+    }
+
+    /* Code editor container */
+    #editor {
+      width: 100%;
+      height: clamp(240px, 45vh, 420px);
+      border: 4px solid #ADD8E6;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* Output console */
+    #output {
+      width: 100%;
+      height: clamp(180px, 30vh, 320px);
+      border: 4px solid #ADD8E6;
+      color: white;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+    }
+
+    /* Button styling */
+    button {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      transition: transform 0.15s ease, background 0.25s ease;
+      touch-action: manipulation;
+    }
+
+    /* Button hover effect */
+    button:hover {
+      background: linear-gradient(135deg, #0056b3, #1f75cc);
+    }
+
+    /* Button pressed effect */
+    button:active {
+      transform: scale(0.99);
+    }
+
+    /* Mobile-specific layout tweaks */
+    @media (max-width: 520px) {
+      body { padding: 10px; }
+      .page { border-radius: 14px; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Main content wrapper -->
+  <div class="page">
+    <h1 class="title">Integrated Development Environment</h1>
+    <hr class="divider">
+
+    <!-- Monaco editor will be mounted here -->
+    <div id="editor"></div>
+
+    <!-- Runs Python code when clicked -->
+    <button type="button" onclick="runPython()">Run Code</button>
+
+    <!-- Displays Python output and errors -->
+    <div id="output">Loading Pyodide...</div>
+  </div>
+
+  <script>
+    /* Pyodide instance */
+    let pyodide = null;
+
+    /* Tracks whether Pyodide has finished loading */
+    let pyodideReady = false;
+
+    /* Replaces output content */
+    function setOutput(text) {
+      document.getElementById("output").textContent = text;
+    }
+
+    /* Appends text to existing output */
+    function appendOutput(text) {
+      const out = document.getElementById("output");
+      out.textContent += text;
+    }
+
+    /* Loads Pyodide and sets stdout/stderr handlers */
+    async function loadPyodideAndPackages() {
+      pyodide = await loadPyodide({
+        stdout: (text) => appendOutput(text),
+        stderr: (text) => appendOutput(text)
+      });
+      pyodideReady = true;
+      setOutput("✅ Pyodide loaded. You can run Python code now.");
+    }
+
+    /* Start loading Pyodide immediately */
+    loadPyodideAndPackages();
+
+    /* Configure Monaco editor loader */
+    require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.43.0/min/vs' }});
+
+    /* Initialize Monaco editor */
+    require(['vs/editor/editor.main'], function () {
+      window.editor = monaco.editor.create(document.getElementById('editor'), {
+        value:
+`name = input("Enter your name: ")
+print("Hello", name)`,
+        language: 'python',
+        theme: 'vs-dark',
+        fontSize: 14,
+        minimap: { enabled: false },    // Disabled for better mobile usability
+        scrollBeyondLastLine: false,
+        wordWrap: 'on'                  // Prevents horizontal scrolling
+      });
+
+      /* Force editor layout after rendering */
+      window.editor.layout();
+
+      /* Adjust editor size on resize / rotation */
+      const ro = new ResizeObserver(() => window.editor.layout());
+      ro.observe(document.getElementById('editor'));
+      window.addEventListener('orientationchange', () =>
+        setTimeout(() => window.editor.layout(), 150)
+      );
+    });
+
+    /* Executes Python code from the editor */
+    async function runPython() {
+      if (!pyodideReady) {
+        setOutput("⏳ Pyodide is still loading...");
+        return;
+      }
+
+      /* Clear output before running */
+      setOutput("");
+
+      /* Get user-written Python code */
+      const userCode = window.editor.getValue();
+
+      /* Replace Python input() with browser prompt() */
+      const inputPatch = `
+import builtins
+from js import prompt
+
+def _browser_input(msg=""):
+    val = prompt(msg)
+    return "" if val is None else val
+
+builtins.input = _browser_input
+`;
+
+      /* Escape backslashes and triple quotes for safe execution */
+      const safeUserCode = userCode
+        .replace(/\\/g, '\\\\')
+        .replace(/"""/g, '\\"""');
+
+      try {
+        /* Run Python code with stdout/stderr capture */
+        await pyodide.runPythonAsync(`
+import io, traceback
+from contextlib import redirect_stdout, redirect_stderr
+
+${inputPatch}
+
+_stdout, _stderr = io.StringIO(), io.StringIO()
+with redirect_stdout(_stdout), redirect_stderr(_stderr):
+    try:
+        exec("""${safeUserCode}""")
+    except Exception:
+        traceback.print_exc()
+
+output = _stdout.getvalue() + _stderr.getvalue()
+`);
+
+        /* Retrieve and display output */
+        const output = pyodide.globals.get("output");
+        setOutput(output || "[No output]");
+      } catch (err) {
+        /* Display fatal errors */
+        setOutput("❌ Error:\n" + err);
+      }
+    }
+  </script>
+</body>
+</html>
